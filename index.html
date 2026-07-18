@@ -407,31 +407,41 @@ let matrixInterval = setInterval(drawMatrix, 50);
 let player = null;
 let isPlaying = false;
 let playerReady = false;
+let pendingPlay = false;
 
 function onYouTubeIframeAPIReady() {
-  player = new YT.Player('youtube-player', {
-    videoId: '5ar42kauTd8',
-    playerVars: {
-      autoplay: 0,
-      controls: 0,
-      loop: 1,
-      playlist: '5ar42kauTd8',
-      modestbranding: 1,
-      rel: 0
-    },
-    events: {
-      onReady: function() {
-        playerReady = true;
-        player.setVolume(20);
+  try {
+    player = new YT.Player('youtube-player', {
+      videoId: '5ar42kauTd8',
+      playerVars: {
+        autoplay: 0,
+        controls: 0,
+        loop: 1,
+        playlist: '5ar42kauTd8',
+        modestbranding: 1,
+        rel: 0
+      },
+      events: {
+        onReady: function() {
+          playerReady = true;
+          player.setVolume(20);
+          if (pendingPlay) {
+            pendingPlay = false;
+            player.playVideo();
+          }
+        }
       }
-    }
-  });
+    });
+  } catch (e) {
+    console.log('YouTube player error:', e);
+  }
 }
 
 function toggleMusic() {
   const btn = document.getElementById('musicToggle');
   if (isPlaying) {
     isPlaying = false;
+    pendingPlay = false;
     btn.textContent = '♪ MUSIC: OFF';
     if (player && playerReady) {
       player.pauseVideo();
@@ -442,6 +452,8 @@ function toggleMusic() {
     if (player && playerReady) {
       player.setVolume(20);
       player.playVideo();
+    } else {
+      pendingPlay = true;
     }
   }
 }
@@ -541,9 +553,18 @@ function addLine(text, cls) {
   // Trigger fireworks when heart message appears
   if (text && text.includes('TE QUEREMOS MUCHO')) {
     setTimeout(() => {
-      for (let i = 0; i < 6; i++) {
-        setTimeout(createFirework, i * 500);
+      // Fase 1: 8 explosiones individuales
+      for (let i = 0; i < 8; i++) {
+        setTimeout(createFirework, i * 400);
       }
+      // Fase 2: gran final - 4 explosiones simultaneas
+      setTimeout(() => {
+        createFirework();
+        setTimeout(createFirework, 100);
+        setTimeout(createFirework, 200);
+        setTimeout(createFirework, 300);
+        setTimeout(createFirework, 400);
+      }, 3500);
     }, 800);
   }
   return div;
@@ -620,30 +641,34 @@ document.getElementById('startBtn').addEventListener('click', () => {
 
 // ============ FIREWORKS ============
 function createFirework() {
-  const colors = ['#00ff41', '#ffdd00', '#ff3366', '#00ccff', '#ff6600', '#aa44ff', '#ff88ff'];
+  const colors = ['#00ff41', '#ffdd00', '#ff3366', '#00ccff', '#ff6600', '#aa44ff', '#ff88ff', '#ff4444', '#44ff44', '#ffaa00'];
   const x = Math.random() * window.innerWidth;
-  const y = Math.random() * window.innerHeight * 0.55 + 30;
+  const y = Math.random() * window.innerHeight * 0.5 + 40;
   const color = colors[Math.floor(Math.random() * colors.length)];
-  const count = 35 + Math.floor(Math.random() * 20);
+  const color2 = colors[Math.floor(Math.random() * colors.length)];
+  const count = 70 + Math.floor(Math.random() * 40);
 
   for (let i = 0; i < count; i++) {
     const dot = document.createElement('div');
     dot.className = 'firework-particle';
+    const c = i % 3 === 0 ? color2 : color;
     dot.style.cssText =
       'left:' + x + 'px;top:' + y + 'px;' +
-      'background:' + color + ';' +
-      'box-shadow:0 0 6px ' + color + ';';
+      'background:' + c + ';' +
+      'box-shadow:0 0 8px ' + c + ';' +
+      'width:' + (2 + Math.random() * 4) + 'px;' +
+      'height:' + (2 + Math.random() * 4) + 'px;';
     document.body.appendChild(dot);
 
     const angle = (i / count) * Math.PI * 2;
-    const dist = 40 + Math.random() * 100;
+    const dist = 50 + Math.random() * 140;
     const dx = Math.cos(angle) * dist;
     const dy = Math.sin(angle) * dist;
-    const dur = 900 + Math.random() * 700;
+    const dur = 1200 + Math.random() * 800;
 
     dot.animate([
       { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-      { transform: 'translate(' + dx + 'px, ' + dy + 'px) scale(0.2)', opacity: 0 }
+      { transform: 'translate(' + dx + 'px, ' + dy + 'px) scale(0.1)', opacity: 0 }
     ], {
       duration: dur,
       easing: 'ease-out',
