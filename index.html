@@ -366,7 +366,9 @@ canvas#matrix {
 </div>
 
 <button class="music-toggle" id="musicToggle">♪ MUSIC: OFF</button>
+<div id="youtube-player" style="display:none;"></div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
 // ============ MATRIX RAIN ============
 const canvas = document.getElementById('matrix');
@@ -401,130 +403,29 @@ function drawMatrix() {
 
 let matrixInterval = setInterval(drawMatrix, 50);
 
-// ============ AUDIO - LAS MAÑANITAS ============
-let audioCtx = null;
+// ============ YOUTUBE - LAS MAÑANITAS ============
+let player = null;
 let isPlaying = false;
-let musicTimeout = null;
+let playerReady = false;
 
-function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-}
-
-function playNote(freq, duration, startTime, type, gain) {
-  if (!audioCtx) return;
-  const osc = audioCtx.createOscillator();
-  const amp = audioCtx.createGain();
-  osc.type = type || 'square';
-  osc.frequency.setValueAtTime(freq, startTime);
-  amp.gain.setValueAtTime(gain || 0.1, startTime);
-  amp.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  osc.connect(amp);
-  amp.connect(audioCtx.destination);
-  osc.start(startTime);
-  osc.stop(startTime + duration);
-}
-
-function playLasMananitas() {
-  if (!audioCtx) return;
-  const bpm = 100;
-  const beat = 60 / bpm;
-  const t = audioCtx.currentTime + 0.1;
-
-  // Intro arpeggio
-  playNote(523.25, beat * 0.5, t, 'square', 0.06);
-  playNote(659.25, beat * 0.5, t + beat * 0.5, 'square', 0.06);
-  playNote(783.99, beat * 0.5, t + beat * 1, 'square', 0.06);
-
-  const offset = beat * 1.8;
-
-  // Helper: play a note with bass
-  function n(freq, dur, time, vol) {
-    playNote(freq, dur, time, 'square', vol || 0.09);
-    playNote(freq / 2, dur, time, 'triangle', 0.03);
-  }
-
-  // ===== LAS MAÑANITAS =====
-  // "Estas son las mañanitas que cantaba el Rey David"
-  //  E     G     A     C5    B4    A     G     E     D     E     G     E     D     C
-  const p1 = [
-    [329.63, beat*1], [392, beat*0.5], [440, beat*0.5],
-    [523.25, beat*1], [493.88, beat*0.5], [440, beat*0.5],
-    [392, beat*0.75], [329.63, beat*0.25],
-    [293.66, beat*0.5], [329.63, beat*0.5], [392, beat*0.5],
-    [329.63, beat*0.5], [293.66, beat*0.5], [261.63, beat*1.5]
-  ];
-
-  // "Hoy por ser día de tu santo te las cantamos a ti"
-  //  C     E     G     A     C5    B4    A     G     E     D     E     G     E     D     C
-  const p2 = [
-    [261.63, beat*0.5], [329.63, beat*0.5], [392, beat*0.5],
-    [440, beat*0.5], [523.25, beat*0.75], [493.88, beat*0.25],
-    [440, beat*0.5], [392, beat*0.5],
-    [329.63, beat*0.75], [293.66, beat*0.25],
-    [329.63, beat*0.5], [392, beat*0.5],
-    [329.63, beat*0.5], [293.66, beat*0.5], [261.63, beat*2]
-  ];
-
-  // "Despierta mi bien despierta mira que ya amaneció"
-  //  G     A     C5    B4    A     G     E     D     E     G     A     G     E     D     C
-  const p3 = [
-    [392, beat*0.5], [440, beat*0.5],
-    [523.25, beat*0.75], [493.88, beat*0.25],
-    [440, beat*0.5], [392, beat*0.5],
-    [329.63, beat*0.75], [293.66, beat*0.25],
-    [329.63, beat*0.5], [392, beat*0.5], [440, beat*0.5],
-    [392, beat*0.5], [329.63, beat*0.5],
-    [293.66, beat*0.5], [261.63, beat*1.5]
-  ];
-
-  // "Ya los pajarillos cantan, la luna ya se metió"
-  //  G     A     C5    B4    A     G     E     G     A     G     E     D     C
-  const p4 = [
-    [392, beat*0.5], [440, beat*0.5],
-    [523.25, beat*0.75], [493.88, beat*0.25],
-    [440, beat*0.5], [392, beat*0.5],
-    [329.63, beat*0.5],
-    [392, beat*0.5], [440, beat*0.5],
-    [392, beat*0.5], [329.63, beat*0.5],
-    [293.66, beat*0.5], [261.63, beat*1.5]
-  ];
-
-  // "Qué linda está la mañana en que vengo a saludarte"
-  //  C     E     G     A     C5    B4    A     G     E     D     E     G     E     D     C
-  const p5 = p1.slice();
-
-  // "Venimos todos con gusto y placer a felicitarte"
-  const p6 = [
-    [261.63, beat*0.5], [329.63, beat*0.5], [392, beat*0.5],
-    [440, beat*0.5], [392, beat*0.75], [329.63, beat*0.25],
-    [293.66, beat*0.5], [261.63, beat*0.5],
-    [293.66, beat*0.5], [392, beat*0.5],
-    [392, beat*0.5], [329.63, beat*0.5],
-    [293.66, beat*0.5], [261.63, beat*2]
-  ];
-
-  const phrases = [p1, p2, p3, p4, p5, p6];
-  let cursor = offset;
-
-  for (const phrase of phrases) {
-    for (const [freq, dur] of phrase) {
-      n(freq, dur, cursor);
-      cursor += dur + 0.015;
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('youtube-player', {
+    videoId: '5ar42kauTd8',
+    playerVars: {
+      autoplay: 0,
+      controls: 0,
+      loop: 1,
+      playlist: '5ar42kauTd8',
+      modestbranding: 1,
+      rel: 0
+    },
+    events: {
+      onReady: function() {
+        playerReady = true;
+        player.setVolume(20);
+      }
     }
-    cursor += beat * 0.3;
-  }
-
-  // Final flourish
-  setTimeout(() => {
-    if (isPlaying) {
-      // Little arpeggio at end
-      playNote(523.25, beat * 0.8, audioCtx.currentTime, 'square', 0.07);
-      playNote(659.25, beat * 0.8, audioCtx.currentTime + beat * 0.6, 'square', 0.07);
-      playNote(783.99, beat * 1.2, audioCtx.currentTime + beat * 1.2, 'square', 0.09);
-    }
-  }, (cursor + beat) * 1000);
+  });
 }
 
 function toggleMusic() {
@@ -532,28 +433,16 @@ function toggleMusic() {
   if (isPlaying) {
     isPlaying = false;
     btn.textContent = '♪ MUSIC: OFF';
-    if (musicTimeout) {
-      clearTimeout(musicTimeout);
-      musicTimeout = null;
-    }
-    if (audioCtx) {
-      audioCtx.suspend();
+    if (player && playerReady) {
+      player.pauseVideo();
     }
   } else {
     isPlaying = true;
     btn.textContent = '♪ MUSIC: ON';
-    initAudio();
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
+    if (player && playerReady) {
+      player.setVolume(20);
+      player.playVideo();
     }
-    playLasMananitas();
-    // Repeat every ~40s
-    musicTimeout = setTimeout(function schedule() {
-      if (isPlaying) {
-        playLasMananitas();
-        musicTimeout = setTimeout(schedule, 40000);
-      }
-    }, 40000);
   }
 }
 
@@ -726,10 +615,6 @@ function startBirthdaySequence() {
 }
 
 document.getElementById('startBtn').addEventListener('click', () => {
-  initAudio();
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
   startBirthdaySequence();
 });
 
