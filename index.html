@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KILLA - Birthday Terminal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0a0a0a;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+
+canvas#matrix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.terminal-wrapper {
+  position: relative;
+  z-index: 1;
+  width: 95%;
+  max-width: 820px;
+  padding: 20px;
+}
+
+.terminal {
+  background: rgba(10, 10, 10, 0.92);
+  border: 2px solid #00ff41;
+  border-radius: 8px;
+  padding: 25px 30px;
+  box-shadow:
+    0 0 20px rgba(0, 255, 65, 0.15),
+    inset 0 0 60px rgba(0, 255, 65, 0.03);
+  position: relative;
+  backdrop-filter: blur(2px);
+}
+
+.terminal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.015) 2px,
+    rgba(0, 255, 65, 0.015) 4px
+  );
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+  margin-bottom: 18px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.dot.red { background: #ff5555; }
+.dot.yellow { background: #ffaa33; }
+.dot.green { background: #00ff41; }
+
+.terminal-title {
+  color: #00aa33;
+  font-size: 14px;
+  margin-left: auto;
+  letter-spacing: 1px;
+  font-family: 'Courier New', monospace;
+}
+
+#output {
+  min-height: 420px;
+  max-height: 520px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #00ff41 transparent;
+  padding-right: 5px;
+}
+
+#output::-webkit-scrollbar {
+  width: 4px;
+}
+#output::-webkit-scrollbar-thumb {
+  background: #00ff41;
+  border-radius: 2px;
+}
+
+.line {
+  color: #00ff41;
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: 0;
+  animation: fadeIn 0.08s ease forwards;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.3);
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+.line.dim {
+  color: #005a1a;
+  text-shadow: none;
+}
+
+.line.prompt {
+  color: #00aa33;
+}
+
+.line.highlight {
+  color: #ffdd00;
+  text-shadow: 0 0 8px rgba(255, 221, 0, 0.3);
+}
+
+.line.success {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+}
+
+.line.big {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #ffdd00;
+  text-shadow: 0 0 12px rgba(255, 221, 0, 0.3);
+  white-space: pre;
+}
+
+.line.warning {
+  color: #ff6600;
+  text-shadow: 0 0 6px rgba(255, 102, 0, 0.2);
+}
+
+.line.info {
+  color: #00ccff;
+  text-shadow: 0 0 6px rgba(0, 204, 255, 0.2);
+}
+
+.line.creeper {
+  color: #33aa33;
+  text-shadow: 0 0 6px rgba(51, 170, 51, 0.4);
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: pre;
+}
+
+.line.heart {
+  color: #ff3366;
+  text-shadow: 0 0 8px rgba(255, 51, 102, 0.5);
+  font-size: 14px;
+}
+
+.cursor {
+  display: inline-block;
+  width: 10px;
+  height: 18px;
+  background: #00ff41;
+  animation: blink 0.8s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.boot-screen {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.boot-screen .minecraft-logo {
+  color: #55aa55;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: pre;
+  text-shadow: 0 0 10px rgba(85, 170, 85, 0.3);
+  margin-bottom: 10px;
+}
+
+.progress-bar-container {
+  margin: 10px 0;
+  background: rgba(0, 255, 65, 0.08);
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  border-radius: 3px;
+  height: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #005a1a, #00ff41);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.progress-bar-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #00ff41;
+  font-size: 12px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+#boot-screen-content {
+  display: none;
+}
+
+.music-toggle {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  z-index: 10;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  color: #00ff41;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.music-toggle:hover {
+  background: rgba(0, 255, 65, 0.2);
+  box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+}
+
+.btn-start {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 14px 40px;
+  background: transparent;
+  border: 2px solid #00ff41;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.btn-start:hover {
+  background: #00ff41;
+  color: #0a0a0a;
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+}
+
+#startScreen {
+  text-align: center;
+  padding: 40px 0;
+}
+
+#startScreen .title {
+  color: #00ff41;
+  font-size: 14px;
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+#startScreen .subtitle {
+  color: #005a1a;
+  font-size: 12px;
+  margin-top: 20px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.firework-particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 5;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+@media (max-width: 600px) {
+  .terminal {
+    padding: 15px;
+  }
+  .terminal-title { font-size: 11px; }
+  .line { font-size: 13px; }
+  .line.big { font-size: 10px; }
+  .line.creeper { font-size: 10px; }
+  .btn-start { padding: 12px 30px; font-size: 14px; }
+  .boot-screen .minecraft-logo { font-size: 9px; }
+  .terminal-header .dot { width: 8px; height: 8px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<div class="terminal-wrapper">
+  <div class="terminal">
+    <div class="terminal-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="terminal-title">killa@birthday:~$</span>
+    </div>
+
+    <div id="output">
+      <div id="startScreen">
+        <div class="boot-screen">
+<pre class="minecraft-logo">
+██╗  ██╗██╗██╗     ██╗      █████╗
+██║ ██╔╝██║██║     ██║     ██╔══██╗
+█████╔╝ ██║██║     ██║     ███████║
+██╔═██╗ ██║██║     ██║     ██╔══██║
+██║  ██╗██║███████╗███████╗██║  ██║
+╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═╝
+</pre>
+        </div>
+        <div class="title">BIRTHDAY TERMINAL v2.0.2.4</div>
+        <div class="title">[ HACK THE BIRTHDAY ]</div>
+        <button class="btn-start" id="startBtn">> INITIALIZE</button>
+        <div class="subtitle">Presiona INITIALIZE para comenzar</div>
+      </div>
+
+      <div id="boot-screen-content"></div>
+    </div>
+  </div>
+</div>
+
+<button class="music-toggle" id="musicToggle">♪ MUSIC: OFF</button>
+
+<script>
+// ============ MATRIX RAIN ============
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const chars = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝ0123456789><[]{}|/\\';
+const fontSize = 14;
+const columns = Math.floor(canvas.width / fontSize);
+const drops = Array(columns).fill(1);
+
+function drawMatrix() {
+  for (let i = 0; i < drops.length; i++) {
+    const char = chars[Math.floor(Math.random() * chars.length)];
+    const x = i * fontSize;
+    const y = drops[i] * fontSize;
+    ctx.fillStyle = Math.random() > 0.98 ? '#aaffaa' : '#00ff41';
+    ctx.font = fontSize + 'px monospace';
+    ctx.fillText(char, x, y);
+    if (y > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0;
+    }
+    drops[i]++;
+  }
+}
+
+let matrixInterval = setInterval(drawMatrix, 50);
+
+// ============ AUDIO - LAS MAÑANITAS ============
+let audioCtx = null;
+let isPlaying = false;
+let musicTimeout = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playNote(freq, duration, startTime, type, gain) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const amp = audioCtx.createGain();
+  osc.type = type || 'square';
+  osc.frequency.setValueAtTime(freq, startTime);
+  amp.gain.setValueAtTime(gain || 0.1, startTime);
+  amp.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(amp);
+  amp.connect(audioCtx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function playLasMananitas() {
+  if (!audioCtx) return;
+  const bpm = 100;
+  const beat = 60 / bpm;
+  const t = audioCtx.currentTime + 0.1;
+
+  // Intro arpeggio
+  playNote(523.25, beat * 0.5, t, 'square', 0.06);
+  playNote(659.25, beat * 0.5, t + beat * 0.5, 'square', 0.06);
+  playNote(783.99, beat * 0.5, t + beat * 1, 'square', 0.06);
+
+  const offset = beat * 1.8;
+
+  // Helper: play a note with bass
+  function n(freq, dur, time, vol) {
+    playNote(freq, dur, time, 'square', vol || 0.09);
+    playNote(freq / 2, dur, time, 'triangle', 0.03);
+  }
+
+  // ===== LAS MAÑANITAS =====
+  // "Estas son las mañanitas que cantaba el Rey David"
+  //  E     G     A     C5    B4    A     G     E     D     E     G     E     D     C
+  const p1 = [
+    [329.63, beat*1], [392, beat*0.5], [440, beat*0.5],
+    [523.25, beat*1], [493.88, beat*0.5], [440, beat*0.5],
+    [392, beat*0.75], [329.63, beat*0.25],
+    [293.66, beat*0.5], [329.63, beat*0.5], [392, beat*0.5],
+    [329.63, beat*0.5], [293.66, beat*0.5], [261.63, beat*1.5]
+  ];
+
+  // "Hoy por ser día de tu santo te las cantamos a ti"
+  //  C     E     G     A     C5    B4    A     G     E     D     E     G     E     D     C
+  const p2 = [
+    [261.63, beat*0.5], [329.63, beat*0.5], [392, beat*0.5],
+    [440, beat*0.5], [523.25, beat*0.75], [493.88, beat*0.25],
+    [440, beat*0.5], [392, beat*0.5],
+    [329.63, beat*0.75], [293.66, beat*0.25],
+    [329.63, beat*0.5], [392, beat*0.5],
+    [329.63, beat*0.5], [293.66, beat*0.5], [261.63, beat*2]
+  ];
+
+  // "Despierta mi bien despierta mira que ya amaneció"
+  //  G     A     C5    B4    A     G     E     D     E     G     A     G     E     D     C
+  const p3 = [
+    [392, beat*0.5], [440, beat*0.5],
+    [523.25, beat*0.75], [493.88, beat*0.25],
+    [440, beat*0.5], [392, beat*0.5],
+    [329.63, beat*0.75], [293.66, beat*0.25],
+    [329.63, beat*0.5], [392, beat*0.5], [440, beat*0.5],
+    [392, beat*0.5], [329.63, beat*0.5],
+    [293.66, beat*0.5], [261.63, beat*1.5]
+  ];
+
+  // "Ya los pajarillos cantan, la luna ya se metió"
+  //  G     A     C5    B4    A     G     E     G     A     G     E     D     C
+  const p4 = [
+    [392, beat*0.5], [440, beat*0.5],
+    [523.25, beat*0.75], [493.88, beat*0.25],
+    [440, beat*0.5], [392, beat*0.5],
+    [329.63, beat*0.5],
+    [392, beat*0.5], [440, beat*0.5],
+    [392, beat*0.5], [329.63, beat*0.5],
+    [293.66, beat*0.5], [261.63, beat*1.5]
+  ];
+
+  // "Qué linda está la mañana en que vengo a saludarte"
+  //  C     E     G     A     C5    B4    A     G     E     D     E     G     E     D     C
+  const p5 = p1.slice();
+
+  // "Venimos todos con gusto y placer a felicitarte"
+  const p6 = [
+    [261.63, beat*0.5], [329.63, beat*0.5], [392, beat*0.5],
+    [440, beat*0.5], [392, beat*0.75], [329.63, beat*0.25],
+    [293.66, beat*0.5], [261.63, beat*0.5],
+    [293.66, beat*0.5], [392, beat*0.5],
+    [392, beat*0.5], [329.63, beat*0.5],
+    [293.66, beat*0.5], [261.63, beat*2]
+  ];
+
+  const phrases = [p1, p2, p3, p4, p5, p6];
+  let cursor = offset;
+
+  for (const phrase of phrases) {
+    for (const [freq, dur] of phrase) {
+      n(freq, dur, cursor);
+      cursor += dur + 0.015;
+    }
+    cursor += beat * 0.3;
+  }
+
+  // Final flourish
+  setTimeout(() => {
+    if (isPlaying) {
+      // Little arpeggio at end
+      playNote(523.25, beat * 0.8, audioCtx.currentTime, 'square', 0.07);
+      playNote(659.25, beat * 0.8, audioCtx.currentTime + beat * 0.6, 'square', 0.07);
+      playNote(783.99, beat * 1.2, audioCtx.currentTime + beat * 1.2, 'square', 0.09);
+    }
+  }, (cursor + beat) * 1000);
+}
+
+function toggleMusic() {
+  const btn = document.getElementById('musicToggle');
+  if (isPlaying) {
+    isPlaying = false;
+    btn.textContent = '♪ MUSIC: OFF';
+    if (musicTimeout) {
+      clearTimeout(musicTimeout);
+      musicTimeout = null;
+    }
+    if (audioCtx) {
+      audioCtx.suspend();
+    }
+  } else {
+    isPlaying = true;
+    btn.textContent = '♪ MUSIC: ON';
+    initAudio();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    playLasMananitas();
+    // Repeat every ~40s
+    musicTimeout = setTimeout(function schedule() {
+      if (isPlaying) {
+        playLasMananitas();
+        musicTimeout = setTimeout(schedule, 40000);
+      }
+    }, 40000);
+  }
+}
+
+document.getElementById('musicToggle').addEventListener('click', toggleMusic);
+
+// ============ TERMINAL ENGINE ============
+const output = document.getElementById('output');
+const startScreen = document.getElementById('startScreen');
+const bootContent = document.getElementById('boot-screen-content');
+
+const lines = [
+  { text: '', delay: 200 },
+  { text: '[KILLA@birthday ~]$ ./initialize_birthday.sh --target=killa --year=2024', delay: 40, cls: 'prompt' },
+  { text: '', delay: 300 },
+  { text: '  ████████ Initializing KillaOS v2.0.2.4 ████████', delay: 15 },
+  { text: '', delay: 100 },
+  { text: '  [████░░░░░░░░░░░░]  25%  - Mounting happiness.fs', delay: 25, cls: 'dim' },
+  { text: '  [████████░░░░░░░░]  50%  - Loading laughter.mod', delay: 25, cls: 'dim' },
+  { text: '  [████████████░░░░]  75%  - Injecting joy.dll', delay: 25, cls: 'dim' },
+  { text: '  [████████████████] 100%  - Birthday protocol ready', delay: 25, cls: 'success' },
+  { text: '', delay: 400 },
+  { text: '[KILLA@birthday ~]$ ./scan_target.sh', delay: 40, cls: 'prompt' },
+  { text: '', delay: 150 },
+  { text: '  [!] SCANNING FOR BIRTHDAY GIRL...', delay: 20, cls: 'warning' },
+  { text: '  [!] TARGET FOUND: KILLA', delay: 30, cls: 'highlight' },
+  { text: '  [!] LOCATION:     EARTH (SECTOR 616)', delay: 20, cls: 'info' },
+  { text: '  [!] STATUS:       ANOTHER YEAR WISER', delay: 20, cls: 'success' },
+  { text: '  [!] POWER LEVEL:  OVER 9000', delay: 20, cls: 'highlight' },
+  { text: '', delay: 400 },
+  { text: '[KILLA@birthday ~]$ ./creeper_approval.sh', delay: 40, cls: 'prompt' },
+  { text: '', delay: 200 },
+  { text: '       ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲', delay: 15, cls: 'creeper' },
+  { text: '      ╱                          ╲', delay: 15, cls: 'creeper' },
+  { text: '     │    ██╗  ██╗ █████╗ ██████╗  │', delay: 15, cls: 'creeper' },
+  { text: '     │    ╚██╗██╔╝██╔══██╗██╔══██╗ │', delay: 15, cls: 'creeper' },
+  { text: '     │     ╚███╔╝ ███████║██████╔╝ │', delay: 15, cls: 'creeper' },
+  { text: '     │     ██╔██╗ ██╔══██║██╔══██╗ │', delay: 15, cls: 'creeper' },
+  { text: '     │    ██╔╝ ██╗██║  ██║██║  ██║ │', delay: 15, cls: 'creeper' },
+  { text: '     │    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ │', delay: 15, cls: 'creeper' },
+  { text: '     │        HAPPY BIRTHDAY!        │', delay: 15, cls: 'creeper' },
+  { text: '     ╲                          ╱', delay: 15, cls: 'creeper' },
+  { text: '       ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱', delay: 15, cls: 'creeper' },
+  { text: '', delay: 500 },
+  { text: '[KILLA@birthday ~]$ ./generate_wish.sh', delay: 40, cls: 'prompt' },
+  { text: '', delay: 250 },
+  { text: '  > Mining for happy memories...', delay: 20, cls: 'dim' },
+  { text: '  > Found 99 happiness blocks!', delay: 20, cls: 'success' },
+  { text: '  > Crafting birthday message...', delay: 20, cls: 'dim' },
+  { text: '  > Combining with redstone and gunpowder...', delay: 20, cls: 'warning' },
+  { text: '  > ✦ BOOM! ✦ A creeper-load of birthday joy!', delay: 25, cls: 'highlight' },
+  { text: '', delay: 500 },
+  { text: '[KILLA@birthday ~]$ cat birthday_wish.txt', delay: 40, cls: 'prompt' },
+  { text: '', delay: 300 },
+  { text: '╔══════════════════════════════════════════╗', delay: 10, cls: 'big' },
+  { text: '║                                          ║', delay: 10, cls: 'big' },
+  { text: '║   ██╗  ██╗ █████╗ ██████╗ ██████╗██╗   ║', delay: 15, cls: 'big' },
+  { text: '║   ██║  ██║██╔══██╗██╔══██╗██╔══██╚██╗  ║', delay: 15, cls: 'big' },
+  { text: '║   ███████║███████║██████╔╝██████╔╝ ╚██╗ ║', delay: 15, cls: 'big' },
+  { text: '║   ██╔══██║██╔══██║██╔══██╗██╔══██╗  ╚█╗ ║', delay: 15, cls: 'big' },
+  { text: '║   ██║  ██║██║  ██║██████╔╝██████╔╝   ╚█╗║', delay: 15, cls: 'big' },
+  { text: '║   ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═════╝     ╚═╝║', delay: 15, cls: 'big' },
+  { text: '║                                          ║', delay: 10, cls: 'big' },
+  { text: '╠══════════════════════════════════════════╣', delay: 10, cls: 'big' },
+  { text: '║                                          ║', delay: 10, cls: 'big' },
+  { text: '║      ♪ HAPPY BIRTHDAY, KILLA! ♪         ║', delay: 20, cls: 'big' },
+  { text: '║                                          ║', delay: 10, cls: 'big' },
+  { text: '╠══════════════════════════════════════════╣', delay: 10, cls: 'big' },
+  { text: '║                                          ║', delay: 10, cls: 'big' },
+  { text: '║  Que tu código compile siempre limpio,   ║', delay: 15, cls: 'big' },
+  { text: '║  tus creepers exploten lejos de tu base  ║', delay: 15, cls: 'big' },
+  { text: '║  y tu diamante interior brille más que   ║', delay: 15, cls: 'big' },
+  { text: '║  un bloque de netherita encantado. ✦    ║', delay: 15, cls: 'big' },
+  { text: '║                                          ║', delay: 10, cls: 'big' },
+  { text: '╚══════════════════════════════════════════╝', delay: 10, cls: 'big' },
+  { text: '', delay: 400 },
+  { text: '           ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥', delay: 15, cls: 'heart' },
+  { text: '        ♥  TE QUEREMOS MUCHO!  ♥', delay: 20, cls: 'heart' },
+  { text: '           ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥ ♥', delay: 15, cls: 'heart' },
+  { text: '', delay: 600 },
+  { text: '        ✦ ✦  FELIZ CUMPLEAÑOS KILLA!  ✦ ✦', delay: 25, cls: 'highlight' },
+  { text: '', delay: 500 },
+  { text: '[KILLA@birthday ~]$ _,', delay: 40, cls: 'prompt' },
+  { text: '', delay: 100, isCursor: true },
+];
+
+let currentLine = 0;
+let lineCount = 0;
+
+function addLine(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'line' + (cls ? ' ' + cls : '');
+  div.textContent = text;
+  bootContent.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+
+  // Trigger fireworks when heart message appears
+  if (text && text.includes('TE QUEREMOS MUCHO')) {
+    setTimeout(() => {
+      for (let i = 0; i < 6; i++) {
+        setTimeout(createFirework, i * 500);
+      }
+    }, 800);
+  }
+  return div;
+}
+
+function showCursor() {
+  const span = document.createElement('span');
+  span.className = 'cursor';
+  bootContent.appendChild(span);
+  output.scrollTop = output.scrollHeight;
+}
+
+function processLine(lineData) {
+  if (lineData.isCursor) {
+    showCursor();
+    return;
+  }
+  addLine(lineData.text, lineData.cls);
+}
+
+function runTerminal() {
+  if (currentLine >= lines.length) {
+    return;
+  }
+
+  const lineData = lines[currentLine];
+  currentLine++;
+  lineCount++;
+
+  processLine(lineData);
+
+  const delay = lineData.delay !== undefined ? lineData.delay : 20;
+  setTimeout(runTerminal, delay);
+}
+
+function startBirthdaySequence() {
+  startScreen.style.display = 'none';
+  bootContent.style.display = 'block';
+
+  // Auto-start music
+  if (!isPlaying) {
+    toggleMusic();
+  }
+
+  // Progress bar
+  const barContainer = document.createElement('div');
+  barContainer.className = 'progress-bar-container';
+  barContainer.innerHTML =
+    '<div class="progress-bar-fill" id="progressFill"></div>' +
+    '<div class="progress-bar-text" id="progressText">LOADING BIRTHDAY PROTOCOL... 0%</div>';
+  bootContent.appendChild(barContainer);
+
+  let progress = 0;
+  const progInterval = setInterval(() => {
+    progress += Math.floor(Math.random() * 8) + 2;
+    if (progress > 100) progress = 100;
+    const fill = document.getElementById('progressFill');
+    const text = document.getElementById('progressText');
+    if (fill) fill.style.width = progress + '%';
+    if (text) text.textContent = 'LOADING BIRTHDAY PROTOCOL... ' + progress + '%';
+    if (progress >= 100) {
+      clearInterval(progInterval);
+      setTimeout(() => {
+        if (barContainer && barContainer.parentNode) barContainer.remove();
+        runTerminal();
+      }, 500);
+    }
+  }, 100);
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  initAudio();
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  startBirthdaySequence();
+});
+
+// ============ FIREWORKS ============
+function createFirework() {
+  const colors = ['#00ff41', '#ffdd00', '#ff3366', '#00ccff', '#ff6600', '#aa44ff', '#ff88ff'];
+  const x = Math.random() * window.innerWidth;
+  const y = Math.random() * window.innerHeight * 0.55 + 30;
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  const count = 35 + Math.floor(Math.random() * 20);
+
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'firework-particle';
+    dot.style.cssText =
+      'left:' + x + 'px;top:' + y + 'px;' +
+      'background:' + color + ';' +
+      'box-shadow:0 0 6px ' + color + ';';
+    document.body.appendChild(dot);
+
+    const angle = (i / count) * Math.PI * 2;
+    const dist = 40 + Math.random() * 100;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    const dur = 900 + Math.random() * 700;
+
+    dot.animate([
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+      { transform: 'translate(' + dx + 'px, ' + dy + 'px) scale(0.2)', opacity: 0 }
+    ], {
+      duration: dur,
+      easing: 'ease-out',
+      fill: 'forwards'
+    });
+    setTimeout(() => { if (dot.parentNode) dot.remove(); }, dur + 50);
+  }
+}
+
+window.addEventListener('resize', resizeCanvas);
+</script>
+</body>
+</html>
