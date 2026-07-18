@@ -564,21 +564,11 @@ function addLine(text, cls) {
   bootContent.appendChild(div);
   output.scrollTop = output.scrollHeight;
 
-  // Trigger fireworks when heart/big message appears
+  // Trigger infinite fireworks with TE QUIERO MUCHO
   if (text && (text.includes('TE QUEREMOS MUCHO') || text.includes('TE QUIERO MUCHO'))) {
     setTimeout(() => {
-      // Fase 1: 8 explosiones individuales
-      for (let i = 0; i < 8; i++) {
-        setTimeout(createFirework, i * 400);
-      }
-      // Fase 2: gran final - 4 explosiones simultaneas
-      setTimeout(() => {
-        createFirework();
-        setTimeout(createFirework, 100);
-        setTimeout(createFirework, 200);
-        setTimeout(createFirework, 300);
-        setTimeout(createFirework, 400);
-      }, 3500);
+      // Start infinite fireworks
+      startFireworksLoop();
     }, 800);
   }
   return div;
@@ -654,13 +644,45 @@ document.getElementById('startBtn').addEventListener('click', () => {
 });
 
 // ============ FIREWORKS ============
+let fireworksActive = false;
+let fireworkTimer = null;
+
+function spawnText(x, y) {
+  const el = document.createElement('div');
+  el.textContent = 'TE QUIERO MUCHO';
+  el.style.cssText =
+    'position:fixed;left:' + x + 'px;top:' + y + 'px;' +
+    'color:#ff3366;font-family:\'Courier New\',monospace;' +
+    'font-size:22px;font-weight:bold;' +
+    'text-shadow:0 0 20px #ff3366,0 0 40px #ff3366;' +
+    'pointer-events:none;z-index:6;' +
+    'transform:translate(-50%,-50%);';
+  document.body.appendChild(el);
+
+  const dur = 2000 + Math.random() * 1000;
+  const driftX = (Math.random() - 0.5) * 60;
+  el.animate([
+    { transform: 'translate(-50%,-50%) scale(0.5)', opacity: 0 },
+    { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 1, offset: 0.15 },
+    { transform: 'translate(' + (-50 + driftX) + '%,-150%) scale(1)', opacity: 0 }
+  ], {
+    duration: dur,
+    easing: 'ease-out',
+    fill: 'forwards'
+  });
+  setTimeout(() => { if (el.parentNode) el.remove(); }, dur + 50);
+}
+
 function createFirework() {
   const colors = ['#00ff41', '#ffdd00', '#ff3366', '#00ccff', '#ff6600', '#aa44ff', '#ff88ff', '#ff4444', '#44ff44', '#ffaa00'];
   const x = Math.random() * window.innerWidth;
-  const y = Math.random() * window.innerHeight * 0.5 + 40;
+  const y = Math.random() * window.innerHeight * 0.45 + 30;
   const color = colors[Math.floor(Math.random() * colors.length)];
   const color2 = colors[Math.floor(Math.random() * colors.length)];
-  const count = 70 + Math.floor(Math.random() * 40);
+  const count = 80 + Math.floor(Math.random() * 50);
+
+  // Spawn text after explosion
+  setTimeout(() => spawnText(x, y), 200);
 
   for (let i = 0; i < count; i++) {
     const dot = document.createElement('div');
@@ -675,7 +697,7 @@ function createFirework() {
     document.body.appendChild(dot);
 
     const angle = (i / count) * Math.PI * 2;
-    const dist = 50 + Math.random() * 140;
+    const dist = 50 + Math.random() * 150;
     const dx = Math.cos(angle) * dist;
     const dy = Math.sin(angle) * dist;
     const dur = 1200 + Math.random() * 800;
@@ -689,6 +711,25 @@ function createFirework() {
       fill: 'forwards'
     });
     setTimeout(() => { if (dot.parentNode) dot.remove(); }, dur + 50);
+  }
+}
+
+function startFireworksLoop() {
+  fireworksActive = true;
+  function loop() {
+    if (!fireworksActive) return;
+    createFirework();
+    const nextDelay = 600 + Math.random() * 1200;
+    fireworkTimer = setTimeout(loop, nextDelay);
+  }
+  loop();
+}
+
+function stopFireworksLoop() {
+  fireworksActive = false;
+  if (fireworkTimer) {
+    clearTimeout(fireworkTimer);
+    fireworkTimer = null;
   }
 }
 
